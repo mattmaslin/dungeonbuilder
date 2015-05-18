@@ -1,5 +1,5 @@
 [package]
-name = "dungeonbuilder-rs"
+name = "dungeonbuilder"
 version = "0.1.0"
 authors = ["mattmaslin <matt.maslin@gmail.com>"]
 

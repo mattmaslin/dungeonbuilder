@@ -18,4 +18,12 @@ impl Dungeon {
     pub fn add_hallway(&mut self, hallway: Hallway) {
         self.hallways.push(hallway);
     }
+
+    pub fn rooms(&self) -> &[Room] {
+        &self.rooms[..]
+    }
+
+    pub fn hallways(&self) -> &[Hallway] {
+        &self.hallways[..]
+    }
 }
