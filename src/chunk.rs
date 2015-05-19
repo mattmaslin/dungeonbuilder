@@ -1,8 +1,9 @@
 use point::Point;
 use hallway::Hallway;
 use rand::Rng;
+use dimensionoptions::DimensionOptions;
 
-enum ChunkSplit {
+pub enum ChunkSplit {
     Vertical,
     Horizontal,
 }
@@ -29,26 +30,35 @@ impl Chunk {
         self.width() * self.height()
     }
 
-    fn cant_split(&self, max_size: f32) -> bool {
-        self.width() < (max_size * 2.0f32) && self.height() < (max_size * 2.0f32)
+    fn cant_split(&self, dimension_options: &DimensionOptions) -> bool {
+        self.area() < (dimension_options.min_area * 2.0f32) ||
+            (self.width() < (dimension_options.min_width * 2.0f32) && self.height() < (dimension_options.min_height *2.0f32))
     }
 
-    pub fn split<T: Rng + ?Sized>(&mut self, max_size: f32, rng: &mut T) -> (Option<Chunk>, ChunkSplit) {
+    pub fn split<T: Rng + ?Sized>(&mut self, dimension_options: &DimensionOptions, rng: &mut T) -> (Option<Chunk>, ChunkSplit) {
         let mut split_horizontal = true;
-        if self.cant_split(max_size) {
+        if self.cant_split(dimension_options) {
             return (None, ChunkSplit::Horizontal)
         }
-        if self.width() < (max_size * 2.0f32) {
+        match dimension_options.max_area {
+            Some(max_area) => {
+                if self.area() < max_area && rng.gen_weighted_bool(4) {
+                    return (None, ChunkSplit::Horizontal);
+                }
+            }
+            _ => {}
+        };
+        if self.width() < (dimension_options.min_width * 2.0f32) {
             split_horizontal = false;
-        } else if self.height() >= (max_size * 2.0f32) {
+        } else if self.height() >= (dimension_options.min_height * 2.0f32) {
             split_horizontal = rng.gen_weighted_bool(2);
         }
         if split_horizontal {
-            let mut min = self.lower_left.x() + max_size;
-            if self.width() > (max_size * 2.0f32) {
+            let mut min = self.lower_left.x() + dimension_options.min_width;
+            if self.width() > (dimension_options.min_width * 2.0f32) {
                 min = min + 1.0f32;
             }
-            let max = self.upper_right.x() - max_size + 1.0f32;
+            let max = self.upper_right.x() - dimension_options.min_width + 1.0f32;
             let mut split_x = min;
             if min < max {
                 split_x = rng.gen_range(min, max);
@@ -60,11 +70,11 @@ impl Chunk {
             self.upper_right.set_x(split_x);
             (Some(Chunk::new(lower_left, upper_right)), ChunkSplit::Horizontal)
         } else {
-            let mut min = self.lower_left.y() + max_size;
-            if self.height() > (max_size * 2.0f32) {
+            let mut min = self.lower_left.y() + dimension_options.min_height;
+            if self.height() > (dimension_options.min_height * 2.0f32) {
                 min = min + 1.0f32;
             }
-            let max = self.upper_right.y() - max_size + 1.0f32;            
+            let max = self.upper_right.y() - dimension_options.min_height + 1.0f32;            
             let mut split_y = min;
             if min < max {
                 split_y = rng.gen_range(min, max);
@@ -72,7 +82,6 @@ impl Chunk {
                 panic!("Min is greater than max");
             }
 
-            let split_y = rng.gen_range(min, max);
             let upper_right = self.upper_right.clone();
             let lower_left = Point::new(self.lower_left.x(), split_y);
             self.upper_right.set_y(split_y);
@@ -88,18 +97,18 @@ impl Chunk {
         &self.upper_right
     }
 
-    pub fn strip_hallway(&mut self, side: ChunkSplit) -> Hallway {
+    pub fn strip_hallway(&mut self, side: ChunkSplit, hallway_width: f32) -> Hallway {
         match side {
             ChunkSplit::Vertical => {
-                let lower_left = Point::new(self.lower_left.x(), self.upper_right.y() - 1f32);
+                let lower_left = Point::new(self.lower_left.x(), self.upper_right.y() - hallway_width);
                 let upper_right = Point::new(self.upper_right.x(), self.upper_right.y());
-                self.upper_right.add(Point::new(0f32, -1f32));
+                self.upper_right.add(Point::new(0f32, -hallway_width));
                 Hallway::new(lower_left, upper_right)
             },
             ChunkSplit::Horizontal => {
-                let lower_left = Point::new(self.upper_right.x() - 1f32, self.lower_left.y());
+                let lower_left = Point::new(self.upper_right.x() - hallway_width, self.lower_left.y());
                 let upper_right = Point::new(self.upper_right.x(), self.upper_right.y());
-                self.upper_right.add(Point::new(-1f32, 0f32));
+                self.upper_right.add(Point::new(-hallway_width, 0f32));
                 Hallway::new(lower_left, upper_right)
             },
         }
@@ -109,10 +118,10 @@ impl Chunk {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chunk::ChunkSplit;
     use point::Point;
-    use rand::distributions::range::SampleRange;
     use rand::Rng;
+    use dimensionoptions::DimensionOptions;
+    use hallwayoptions::HallwayOptions;
 
     struct MockRng;
 
@@ -162,8 +171,9 @@ mod tests {
         let lower_left = Point::new(0f32, 0f32);
         let upper_right = Point::new(20f32, 20f32);
         let mut chunk = Chunk::new(lower_left, upper_right); 
+
         let mut mockrng = MockRng;
-        let (new_chunk_option,split) = chunk.split(5f32, &mut mockrng); 
+        let (new_chunk_option,split) = chunk.split(&DimensionOptions::new(5f32,5f32,5f32), &mut mockrng); 
         let new_chunk = new_chunk_option.unwrap();
         assert!(match split {
             ChunkSplit::Horizontal => true,
@@ -183,7 +193,7 @@ mod tests {
         let upper_right = Point::new(20f32, 2f32);
         let mut chunk = Chunk::new(lower_left, upper_right); 
         let mut mockrng = MockRng;
-        let (new_chunk_option,split) = chunk.split(5f32, &mut mockrng); 
+        let (new_chunk_option,split) = chunk.split(&DimensionOptions::new(5f32,5f32,5f32), &mut mockrng); 
         let new_chunk = new_chunk_option.unwrap();
         assert!(match split {
             ChunkSplit::Horizontal => true,
@@ -203,7 +213,7 @@ mod tests {
         let upper_right = Point::new(2f32, 20f32);
         let mut chunk = Chunk::new(lower_left, upper_right); 
         let mut mockrng = MockRng;
-        let (new_chunk_option,split) = chunk.split(5f32, &mut mockrng); 
+        let (new_chunk_option,split) = chunk.split(&DimensionOptions::new(5f32,5f32,5f32), &mut mockrng); 
         let new_chunk = new_chunk_option.unwrap();
         assert!(match split {
             ChunkSplit::Vertical => true,
@@ -223,7 +233,7 @@ mod tests {
         let upper_right = Point::new(2f32, 2f32);
         let mut chunk = Chunk::new(lower_left, upper_right); 
         let mut mockrng = MockRng;
-        let (new_chunk_option,split) = chunk.split(5f32, &mut mockrng); 
+        let (new_chunk_option,_) = chunk.split(&DimensionOptions::new(5f32,5f32,5f32), &mut mockrng); 
         assert!(new_chunk_option.is_none());
     }
 
@@ -233,7 +243,7 @@ mod tests {
         let lower_left = Point::new(0f32, 0f32);
         let upper_right = Point::new(20f32, 20f32);
         let mut chunk = Chunk::new(lower_left, upper_right); 
-        let hallway = chunk.strip_hallway(ChunkSplit::Vertical);
+        let hallway = chunk.strip_hallway(ChunkSplit::Vertical, 1f32);
         assert_eq!(19f32, chunk.upper_right.y());
         assert_eq!(20f32, chunk.upper_right.x());
         assert_eq!(19f32, hallway.lower_left().y());
@@ -246,7 +256,7 @@ mod tests {
         let lower_left = Point::new(0f32, 0f32);
         let upper_right = Point::new(20f32, 20f32);
         let mut chunk = Chunk::new(lower_left, upper_right); 
-        let hallway = chunk.strip_hallway(ChunkSplit::Horizontal);
+        let hallway = chunk.strip_hallway(ChunkSplit::Horizontal, 1f32);
         assert_eq!(20f32, chunk.upper_right.y());
         assert_eq!(19f32, chunk.upper_right.x());
         assert_eq!(0f32, hallway.lower_left().y());

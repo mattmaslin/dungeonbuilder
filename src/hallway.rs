@@ -17,4 +17,16 @@ impl Hallway {
     pub fn upper_right(&self) -> &Point {
         &self.upper_right
     }
+
+    pub fn width(&self) -> f32 {
+        self.upper_right.x() - self.lower_left.x()
+    }
+
+    pub fn height(&self) -> f32 {
+        self.upper_right.y() - self.lower_left.y()
+    }
+
+    pub fn area(&self) -> f32 {
+        self.width() * self.height()
+    }
 }

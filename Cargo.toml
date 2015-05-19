@@ -3,5 +3,28 @@ name = "dungeonbuilder"
 version = "0.1.0"
 authors = ["mattmaslin <matt.maslin@gmail.com>"]
 
+[features]
+example = ["glutin","gl","libc","glium","cgmath"]
+
 [dependencies]
 rand = "0.3"
+
+[dependencies.glutin]
+version = "*"
+optional = true
+
+[dependencies.gl]
+version = "*"
+optional = true
+
+[dependencies.libc]
+version = "*"
+optional = true
+
+[dependencies.glium]
+version = "*"
+optional = true
+
+[dependencies.cgmath]
+version = "*"
+optional = true
