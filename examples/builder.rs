@@ -1,35 +1,18 @@
-#[cfg(feature = "example")]
 extern crate glutin;
 extern crate dungeonbuilder;
-#[cfg(feature = "example")]
 extern crate libc;
-#[cfg(feature = "example")]
 extern crate gl;
 #[macro_use]
-#[cfg(feature = "example")]
 extern crate glium;
-#[cfg(feature = "example")]
 extern crate cgmath;
 
-#[cfg(feature = "example")]
 use dungeonbuilder::dungeonbuilder::DungeonBuilder;
-#[cfg(feature = "example")]
 use dungeonbuilder::point::Point;
-#[cfg(feature = "example")]
 use dungeonbuilder::dimensionoptions::DimensionOptions;
-#[cfg(feature = "example")]
 use dungeonbuilder::hallwayoptions::HallwayOptions;
 
-#[cfg(feature = "example")]
 use cgmath::FixedArray;
 
-#[cfg(not(feature = "example"))]
-#[allow(dead_code)]
-fn main() {
-    println!("This example requires the `example` feature to be enabled");
-}
-
-#[cfg(feature = "example")]
 fn main() {
     use glium::{DisplayBuild, Surface};
     let dungeon = DungeonBuilder::new()
