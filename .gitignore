@@ -6,6 +6,9 @@ Cargo.lock
 *.rlib
 *.dll
 
+# Vim files
+*.swp
+
 # Executables
 *.exe
 
