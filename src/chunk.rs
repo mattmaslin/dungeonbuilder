@@ -2,7 +2,9 @@ use point::Point;
 use hallway::Hallway;
 use rand::Rng;
 use dimensionoptions::DimensionOptions;
+use std::cmp::Ordering;
 
+#[derive(Clone, Copy)]
 pub enum ChunkSplit {
     Vertical,
     Horizontal,
@@ -10,12 +12,13 @@ pub enum ChunkSplit {
 
 pub struct Chunk {
     lower_left: Point,
-    upper_right: Point
+    upper_right: Point,
+    chunk_split: ChunkSplit
 }
 
 impl Chunk {
-    pub fn new(lower_left: Point, upper_right: Point) -> Chunk {
-        Chunk { lower_left: lower_left, upper_right: upper_right }
+    pub fn new(lower_left: Point, upper_right: Point, chunk_split: ChunkSplit) -> Chunk {
+        Chunk { lower_left: lower_left, upper_right: upper_right, chunk_split: chunk_split }
     }
 
     pub fn width(&self) -> f32 {
@@ -30,30 +33,36 @@ impl Chunk {
         self.width() * self.height()
     }
 
-    fn cant_split(&self, dimension_options: &DimensionOptions) -> bool {
-        self.area() < (dimension_options.min_area * 2.0f32) ||
-            (self.width() < (dimension_options.min_width * 2.0f32) && self.height() < (dimension_options.min_height *2.0f32))
+    fn can_split(&self, dimension_options: &DimensionOptions) -> bool {
+        self.area() > (dimension_options.min_area * 2.0f32) && 
+            (self.can_split_vertically(dimension_options) || self.can_split_horizontally(dimension_options))
     }
 
-    pub fn split<T: Rng + ?Sized>(&mut self, dimension_options: &DimensionOptions, rng: &mut T) -> (Option<Chunk>, ChunkSplit) {
-        let mut split_horizontal = true;
-        if self.cant_split(dimension_options) {
-            return (None, ChunkSplit::Horizontal)
+    fn can_split_vertically(&self, dimension_options: &DimensionOptions) -> bool {
+        self.width() > (dimension_options.min_width * 2.0f32)
+    }
+
+    fn can_split_horizontally(&self, dimension_options: &DimensionOptions) -> bool {
+        self.height() > (dimension_options.min_height * 2.0f32)
+    }
+
+    pub fn split<T: Rng + ?Sized>(&mut self, dimension_options: &DimensionOptions, rng: &mut T) -> Option<Chunk> {
+        if !self.can_split(dimension_options) {
+            return None;
         }
         match dimension_options.max_area {
             Some(max_area) => {
                 if self.area() < max_area && rng.gen_weighted_bool(4) {
-                    return (None, ChunkSplit::Horizontal);
+                    return None;
                 }
             }
             _ => {}
         };
-        if self.width() < (dimension_options.min_width * 2.0f32) {
-            split_horizontal = false;
-        } else if self.height() >= (dimension_options.min_height * 2.0f32) {
-            split_horizontal = rng.gen_weighted_bool(2);
-        }
-        if split_horizontal {
+        let split_horizontal = match self.chunk_split {
+            ChunkSplit::Horizontal => !self.can_split_vertically(dimension_options),
+            ChunkSplit::Vertical => self.can_split_horizontally(dimension_options)
+        };
+        if !split_horizontal {
             let mut min = self.lower_left.x() + dimension_options.min_width;
             if self.width() > (dimension_options.min_width * 2.0f32) {
                 min = min + 1.0f32;
@@ -68,7 +77,8 @@ impl Chunk {
             let upper_right = self.upper_right.clone();
             let lower_left = Point::new(split_x, self.lower_left.y());
             self.upper_right.set_x(split_x);
-            (Some(Chunk::new(lower_left, upper_right)), ChunkSplit::Horizontal)
+            self.chunk_split = ChunkSplit::Vertical;
+            Some(Chunk::new(lower_left, upper_right, ChunkSplit::Vertical))
         } else {
             let mut min = self.lower_left.y() + dimension_options.min_height;
             if self.height() > (dimension_options.min_height * 2.0f32) {
@@ -85,7 +95,8 @@ impl Chunk {
             let upper_right = self.upper_right.clone();
             let lower_left = Point::new(self.lower_left.x(), split_y);
             self.upper_right.set_y(split_y);
-            (Some(Chunk::new(lower_left, upper_right)), ChunkSplit::Vertical)
+            self.chunk_split = ChunkSplit::Horizontal;
+            Some(Chunk::new(lower_left, upper_right, ChunkSplit::Horizontal))
         }
     }
 
@@ -97,15 +108,19 @@ impl Chunk {
         &self.upper_right
     }
 
+    pub fn chunk_split(&self) -> ChunkSplit {
+        self.chunk_split
+    }
+
     pub fn strip_hallway(&mut self, side: ChunkSplit, hallway_width: f32) -> Hallway {
         match side {
-            ChunkSplit::Vertical => {
+            ChunkSplit::Horizontal => {
                 let lower_left = Point::new(self.lower_left.x(), self.upper_right.y() - hallway_width);
                 let upper_right = Point::new(self.upper_right.x(), self.upper_right.y());
                 self.upper_right.add(Point::new(0f32, -hallway_width));
                 Hallway::new(lower_left, upper_right)
             },
-            ChunkSplit::Horizontal => {
+            ChunkSplit::Vertical => {
                 let lower_left = Point::new(self.upper_right.x() - hallway_width, self.lower_left.y());
                 let upper_right = Point::new(self.upper_right.x(), self.upper_right.y());
                 self.upper_right.add(Point::new(-hallway_width, 0f32));
@@ -114,6 +129,39 @@ impl Chunk {
         }
     }
 }
+
+impl Ord for Chunk {
+    fn cmp(&self, other: &Chunk) -> Ordering {
+        if self.area() < other.area() {
+            return Ordering::Less;
+        } else if self.area() > other.area() {
+            return Ordering::Greater;
+        }
+
+        Ordering::Equal
+    }
+}
+
+impl PartialOrd for Chunk {
+    fn partial_cmp(&self, other: &Chunk) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Eq for Chunk {
+}
+
+impl PartialEq for Chunk {
+    fn eq(&self, other: &Chunk) -> bool {
+        self.cmp(other) == Ordering::Equal
+    }
+
+    fn ne(&self, other: &Chunk) -> bool {
+        !self.eq(other)
+    }
+}
+
+
 
 #[cfg(test)]
 mod tests {
