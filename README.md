@@ -2,7 +2,7 @@
 
 Based on the algorithm described [here](http://www.polygonpi.com/?p=1191)
 
-![Screenshot](http://i.imgur.com/ej8TU1t.png)
+![Screenshot](http://i.imgur.com/2Fk77MP.png)
 
 ## Example
 
