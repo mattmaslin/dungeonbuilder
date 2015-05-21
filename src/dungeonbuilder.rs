@@ -4,6 +4,7 @@ use point::Point;
 use dungeon::Dungeon;
 use rand::{Rng, ThreadRng, thread_rng};
 use dimensionoptions::DimensionOptions;
+use hallway::Hallway;
 use hallwayoptions::HallwayOptions;
 use std::collections::BinaryHeap;
 
@@ -69,10 +70,10 @@ impl DungeonBuilder  {
                                     };
                                     if can_strip_hallway && total_hallway_percent < hallway_options.hallway_percent {
                                         let hallway_width = self.rng.gen_range(hallway_options.min_hallway_width, hallway_options.max_hallway_width);
-                                        let hallway = chunk.strip_hallway(new_chunk.chunk_split(), hallway_width);
-                                        let hallway_percent = (hallway.area() / self.total_area) * 100f32;
+                                        let hallway_chunk = chunk.strip_hallway(new_chunk.chunk_split(), hallway_width);
+                                        let hallway_percent = (hallway_chunk.area() / self.total_area) * 100f32;
                                         total_hallway_percent = total_hallway_percent + hallway_percent;
-                                        dungeon.add_hallway(hallway);
+                                        dungeon.add_hallway(Hallway::new(hallway_chunk));
                                     }
                                 },
                                 _ => {}
@@ -103,7 +104,7 @@ mod tests {
 
     #[test]
     fn test_build() {
-        DungeonBuilder::new(10f32)
+        DungeonBuilder::new()
             .in_area(Point::new(0f32,0f32), Point::new(1000f32,1000f32))
             .with_dimension_options(DimensionOptions::new(5f32,5f32,5f32))
             .build();

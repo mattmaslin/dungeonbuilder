@@ -1,5 +1,4 @@
 use point::Point;
-use hallway::Hallway;
 use rand::Rng;
 use dimensionoptions::DimensionOptions;
 use std::cmp::Ordering;
@@ -112,19 +111,19 @@ impl Chunk {
         self.chunk_split
     }
 
-    pub fn strip_hallway(&mut self, side: ChunkSplit, hallway_width: f32) -> Hallway {
+    pub fn strip_hallway(&mut self, side: ChunkSplit, hallway_width: f32) -> Chunk {
         match side {
             ChunkSplit::Horizontal => {
                 let lower_left = Point::new(self.lower_left.x(), self.upper_right.y() - hallway_width);
                 let upper_right = Point::new(self.upper_right.x(), self.upper_right.y());
                 self.upper_right.add(Point::new(0f32, -hallway_width));
-                Hallway::new(lower_left, upper_right)
+                Chunk::new(lower_left, upper_right, ChunkSplit::Horizontal)
             },
             ChunkSplit::Vertical => {
                 let lower_left = Point::new(self.upper_right.x() - hallway_width, self.lower_left.y());
                 let upper_right = Point::new(self.upper_right.x(), self.upper_right.y());
                 self.upper_right.add(Point::new(-hallway_width, 0f32));
-                Hallway::new(lower_left, upper_right)
+                Chunk::new(lower_left, upper_right, ChunkSplit::Vertical)
             },
         }
     }
@@ -169,7 +168,6 @@ mod tests {
     use point::Point;
     use rand::Rng;
     use dimensionoptions::DimensionOptions;
-    use hallwayoptions::HallwayOptions;
 
     struct MockRng;
 
@@ -183,7 +181,7 @@ mod tests {
     fn test_new() {
         let lower_left = Point::new(2f32, 3f32);
         let upper_right = Point::new(20f32, 21f32);
-        let chunk = Chunk::new(lower_left, upper_right); 
+        let chunk = Chunk::new(lower_left, upper_right, ChunkSplit::Horizontal); 
         assert_eq!(2f32, chunk.lower_left().x());
         assert_eq!(3f32, chunk.lower_left().y());
         assert_eq!(20f32, chunk.upper_right().x());
@@ -194,7 +192,7 @@ mod tests {
     fn test_width() {
         let lower_left = Point::new(0f32, 0f32);
         let upper_right = Point::new(20f32, 10f32);
-        let chunk = Chunk::new(lower_left, upper_right); 
+        let chunk = Chunk::new(lower_left, upper_right, ChunkSplit::Horizontal); 
         assert_eq!(20f32, chunk.width());
     }
 
@@ -202,7 +200,7 @@ mod tests {
     fn test_height() {
         let lower_left = Point::new(0f32, 0f32);
         let upper_right = Point::new(20f32, 10f32);
-        let chunk = Chunk::new(lower_left, upper_right); 
+        let chunk = Chunk::new(lower_left, upper_right, ChunkSplit::Horizontal); 
         assert_eq!(10f32, chunk.height());
     }
 
@@ -210,7 +208,7 @@ mod tests {
     fn test_area() {
         let lower_left = Point::new(0f32, 0f32);
         let upper_right = Point::new(20f32, 10f32);
-        let chunk = Chunk::new(lower_left, upper_right); 
+        let chunk = Chunk::new(lower_left, upper_right, ChunkSplit::Horizontal); 
         assert_eq!(200f32, chunk.area());
     }
 
@@ -218,19 +216,19 @@ mod tests {
     fn test_split() {
         let lower_left = Point::new(0f32, 0f32);
         let upper_right = Point::new(20f32, 20f32);
-        let mut chunk = Chunk::new(lower_left, upper_right); 
+        let mut chunk = Chunk::new(lower_left, upper_right, ChunkSplit::Vertical); 
 
         let mut mockrng = MockRng;
-        let (new_chunk_option,split) = chunk.split(&DimensionOptions::new(5f32,5f32,5f32), &mut mockrng); 
+        let new_chunk_option = chunk.split(&DimensionOptions::new(5f32,5f32,5f32), &mut mockrng); 
         let new_chunk = new_chunk_option.unwrap();
-        assert!(match split {
+        assert!(match new_chunk.chunk_split() {
             ChunkSplit::Horizontal => true,
             _ => false
         });
-        assert_eq!(6f32, chunk.upper_right().x());
-        assert_eq!(20f32, chunk.upper_right().y());
-        assert_eq!(6f32, new_chunk.lower_left().x());
-        assert_eq!(0f32, new_chunk.lower_left().y());
+        assert_eq!(20f32, chunk.upper_right().x());
+        assert_eq!(6f32, chunk.upper_right().y());
+        assert_eq!(0f32, new_chunk.lower_left().x());
+        assert_eq!(6f32, new_chunk.lower_left().y());
         assert_eq!(20f32, new_chunk.upper_right().x());
         assert_eq!(20f32, new_chunk.upper_right().y());
     }
@@ -238,33 +236,13 @@ mod tests {
     #[test]
     fn test_horizontal_split() {
         let lower_left = Point::new(0f32, 0f32);
-        let upper_right = Point::new(20f32, 2f32);
-        let mut chunk = Chunk::new(lower_left, upper_right); 
-        let mut mockrng = MockRng;
-        let (new_chunk_option,split) = chunk.split(&DimensionOptions::new(5f32,5f32,5f32), &mut mockrng); 
-        let new_chunk = new_chunk_option.unwrap();
-        assert!(match split {
-            ChunkSplit::Horizontal => true,
-            _ => false
-        });
-        assert_eq!(6f32, chunk.upper_right().x());
-        assert_eq!(2f32, chunk.upper_right().y());
-        assert_eq!(6f32, new_chunk.lower_left().x());
-        assert_eq!(0f32, new_chunk.lower_left().y());
-        assert_eq!(20f32, new_chunk.upper_right().x());
-        assert_eq!(2f32, new_chunk.upper_right().y());
-    }
-
-    #[test]
-    fn test_vertical_split() {
-        let lower_left = Point::new(0f32, 0f32);
         let upper_right = Point::new(2f32, 20f32);
-        let mut chunk = Chunk::new(lower_left, upper_right); 
+        let mut chunk = Chunk::new(lower_left, upper_right, ChunkSplit::Vertical); 
         let mut mockrng = MockRng;
-        let (new_chunk_option,split) = chunk.split(&DimensionOptions::new(5f32,5f32,5f32), &mut mockrng); 
+        let new_chunk_option = chunk.split(&DimensionOptions::new(5f32,5f32,5f32), &mut mockrng); 
         let new_chunk = new_chunk_option.unwrap();
-        assert!(match split {
-            ChunkSplit::Vertical => true,
+        assert!(match new_chunk.chunk_split() {
+            ChunkSplit::Horizontal => true,
             _ => false
         });
         assert_eq!(2f32, chunk.upper_right().x());
@@ -276,12 +254,32 @@ mod tests {
     }
 
     #[test]
+    fn test_vertical_split() {
+        let lower_left = Point::new(0f32, 0f32);
+        let upper_right = Point::new(20f32, 2f32);
+        let mut chunk = Chunk::new(lower_left, upper_right, ChunkSplit::Horizontal); 
+        let mut mockrng = MockRng;
+        let new_chunk_option = chunk.split(&DimensionOptions::new(5f32,5f32,5f32), &mut mockrng); 
+        let new_chunk = new_chunk_option.unwrap();
+        assert!(match new_chunk.chunk_split() {
+            ChunkSplit::Vertical => true,
+            _ => false
+        });
+        assert_eq!(6f32, chunk.upper_right().x());
+        assert_eq!(2f32, chunk.upper_right().y());
+        assert_eq!(6f32, new_chunk.lower_left().x());
+        assert_eq!(0f32, new_chunk.lower_left().y());
+        assert_eq!(20f32, new_chunk.upper_right().x());
+        assert_eq!(2f32, new_chunk.upper_right().y());
+    }
+
+    #[test]
     fn test_cant_split() {
         let lower_left = Point::new(0f32, 0f32);
         let upper_right = Point::new(2f32, 2f32);
-        let mut chunk = Chunk::new(lower_left, upper_right); 
+        let mut chunk = Chunk::new(lower_left, upper_right, ChunkSplit::Horizontal); 
         let mut mockrng = MockRng;
-        let (new_chunk_option,_) = chunk.split(&DimensionOptions::new(5f32,5f32,5f32), &mut mockrng); 
+        let new_chunk_option = chunk.split(&DimensionOptions::new(5f32,5f32,5f32), &mut mockrng); 
         assert!(new_chunk_option.is_none());
     }
 
@@ -290,8 +288,8 @@ mod tests {
     fn test_strip_vertical_hallway() {
         let lower_left = Point::new(0f32, 0f32);
         let upper_right = Point::new(20f32, 20f32);
-        let mut chunk = Chunk::new(lower_left, upper_right); 
-        let hallway = chunk.strip_hallway(ChunkSplit::Vertical, 1f32);
+        let mut chunk = Chunk::new(lower_left, upper_right, ChunkSplit::Horizontal); 
+        let hallway = chunk.strip_hallway(ChunkSplit::Horizontal, 1f32);
         assert_eq!(19f32, chunk.upper_right.y());
         assert_eq!(20f32, chunk.upper_right.x());
         assert_eq!(19f32, hallway.lower_left().y());
@@ -303,8 +301,8 @@ mod tests {
     fn test_strip_horizontal_hallway() {
         let lower_left = Point::new(0f32, 0f32);
         let upper_right = Point::new(20f32, 20f32);
-        let mut chunk = Chunk::new(lower_left, upper_right); 
-        let hallway = chunk.strip_hallway(ChunkSplit::Horizontal, 1f32);
+        let mut chunk = Chunk::new(lower_left, upper_right, ChunkSplit::Horizontal); 
+        let hallway = chunk.strip_hallway(ChunkSplit::Vertical, 1f32);
         assert_eq!(20f32, chunk.upper_right.y());
         assert_eq!(19f32, chunk.upper_right.x());
         assert_eq!(0f32, hallway.lower_left().y());

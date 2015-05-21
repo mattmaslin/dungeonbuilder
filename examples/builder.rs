@@ -1,18 +1,33 @@
+#[cfg(feature = "window")]
 extern crate glutin;
 extern crate dungeonbuilder;
+#[cfg(feature = "window")]
 extern crate libc;
+#[cfg(feature = "window")]
 extern crate gl;
 #[macro_use]
+#[cfg(feature = "window")]
 extern crate glium;
+#[cfg(feature = "window")]
 extern crate cgmath;
 
+#[cfg(feature = "window")]
 use dungeonbuilder::dungeonbuilder::DungeonBuilder;
+#[cfg(feature = "window")]
 use dungeonbuilder::point::Point;
+#[cfg(feature = "window")]
 use dungeonbuilder::dimensionoptions::DimensionOptions;
+#[cfg(feature = "window")]
 use dungeonbuilder::hallwayoptions::HallwayOptions;
-
+#[cfg(feature = "window")]
 use cgmath::FixedArray;
 
+#[cfg(not(feature = "window"))]
+fn main() {
+
+}
+
+#[cfg(feature = "window")]
 fn main() {
     use glium::{DisplayBuild, Surface};
     let dungeon = DungeonBuilder::new()
@@ -31,25 +46,25 @@ fn main() {
 
     let mut lines : Vec<Vertex> = Vec::new();
     for room in dungeon.rooms().iter() {
-        lines.push(Vertex { position: [room.lower_left().x(), room.lower_left().y()], color: [1.0f32, 0.0f32, 0.0f32]});
-        lines.push(Vertex { position: [room.lower_left().x(), room.upper_right().y()], color: [1.0f32, 0.0f32, 0.0f32]});
-        lines.push(Vertex { position: [room.lower_left().x(), room.upper_right().y()], color: [1.0f32, 0.0f32, 0.0f32]});
-        lines.push(Vertex { position: [room.upper_right().x(), room.upper_right().y()], color: [1.0f32, 0.0f32, 0.0f32]});
-        lines.push(Vertex { position: [room.upper_right().x(), room.upper_right().y()], color: [1.0f32, 0.0f32, 0.0f32]});
-        lines.push(Vertex { position: [room.upper_right().x(), room.lower_left().y()], color: [1.0f32, 0.0f32, 0.0f32]});
-        lines.push(Vertex { position: [room.upper_right().x(), room.lower_left().y()], color: [1.0f32, 0.0f32, 0.0f32]});
-        lines.push(Vertex { position: [room.lower_left().x(), room.lower_left().y()], color: [1.0f32, 0.0f32, 0.0f32]});
+        lines.push(Vertex { position: [room.lower_left().x(), room.lower_left().y()], color: [0.8f32, 0.8f32, 0.8f32]});
+        lines.push(Vertex { position: [room.lower_left().x(), room.upper_right().y()], color: [0.8f32, 0.8f32, 0.8f32]});
+        lines.push(Vertex { position: [room.lower_left().x(), room.upper_right().y()], color: [0.8f32, 0.8f32, 0.8f32]});
+        lines.push(Vertex { position: [room.upper_right().x(), room.upper_right().y()], color: [0.8f32, 0.8f32, 0.8f32]});
+        lines.push(Vertex { position: [room.upper_right().x(), room.upper_right().y()], color: [0.8f32, 0.8f32, 0.8f32]});
+        lines.push(Vertex { position: [room.upper_right().x(), room.lower_left().y()], color: [0.8f32, 0.8f32, 0.8f32]});
+        lines.push(Vertex { position: [room.upper_right().x(), room.lower_left().y()], color: [0.8f32, 0.8f32, 0.8f32]});
+        lines.push(Vertex { position: [room.lower_left().x(), room.lower_left().y()], color: [0.8f32, 0.8f32, 0.8f32]});
     }
 
     for hallway in dungeon.hallways().iter() {
-        lines.push(Vertex { position: [hallway.lower_left().x(), hallway.lower_left().y()], color: [0.0f32, 1.0f32, 0.0f32]});
-        lines.push(Vertex { position: [hallway.lower_left().x(), hallway.upper_right().y()], color: [0.0f32, 1.0f32, 0.0f32]});
-        lines.push(Vertex { position: [hallway.lower_left().x(), hallway.upper_right().y()], color: [0.0f32, 1.0f32, 0.0f32]});
-        lines.push(Vertex { position: [hallway.upper_right().x(), hallway.upper_right().y()], color: [0.0f32, 1.0f32, 0.0f32]});
-        lines.push(Vertex { position: [hallway.upper_right().x(), hallway.upper_right().y()], color: [0.0f32, 1.0f32, 0.0f32]});
-        lines.push(Vertex { position: [hallway.upper_right().x(), hallway.lower_left().y()], color: [0.0f32, 1.0f32, 0.0f32]});
-        lines.push(Vertex { position: [hallway.upper_right().x(), hallway.lower_left().y()], color: [0.0f32, 1.0f32, 0.0f32]});
-        lines.push(Vertex { position: [hallway.lower_left().x(), hallway.lower_left().y()], color: [0.0f32, 1.0f32, 0.0f32]});
+        for index in 0usize..hallway.points().len() as usize {
+            lines.push(Vertex { position: [hallway.points()[index].x(), hallway.points()[index].y()], color: [0.03f32, 0.4f32, 1.0f32]});
+            if index < hallway.points().len() - 1 {
+                lines.push(Vertex { position: [hallway.points()[index + 1].x(), hallway.points()[index + 1].y()], color: [0.03f32, 0.4f32, 1.0f32]});
+            } else {
+                lines.push(Vertex { position: [hallway.points()[0].x(), hallway.points()[0].y()], color: [0.03f32, 0.4f32, 1.0f32]});
+            }
+        }
     }
 
 
@@ -85,7 +100,7 @@ fn main() {
 
         loop {
             let mut target = display.draw();
-            target.clear_color(0.1, 0.1, 0.1, 1.0);
+            target.clear_color(0.16, 0.16, 0.16, 1.0);
             target.draw(&vertex_buffer, &indices, &program, &uniforms,
                         &Default::default()).unwrap();
             target.finish();
