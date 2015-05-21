@@ -3,6 +3,8 @@
 Based on the algorithm described [here](http://www.polygonpi.com/?p=1191)
 
 ![Screenshot](http://i.imgur.com/2Fk77MP.png)
+-Room walls are white
+-Hallways are blue
 
 ## Example
 
