@@ -19,3 +19,4 @@ cargo run --features window --example builder
 - Merge hallways
 - Merge random rooms
 - Apply Lock & Key algorithm similar to [MetaZelda](https://github.com/tcoxon/metazelda)
+- Add connections
