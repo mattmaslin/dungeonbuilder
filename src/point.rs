@@ -1,3 +1,6 @@
+use std::cmp::Ordering;
+use std::fmt;
+
 #[derive(Copy, Clone, Default)]
 pub struct Point {
     x: f32,
@@ -34,6 +37,48 @@ impl Point {
         self.x = self.x + point.x();
         self.y = self.y + point.y();
     }
+
+    pub fn hash(&self) -> u64 {
+        ((self.x * 10000f32) as u64) + (self.y as u64)
+    }
+
+    pub fn compare_x_y(&self, other: &Point) -> Ordering {
+        if self.x.eq(&other.x()) && self.y.eq(&other.y()) {
+            return Ordering::Equal;
+        }
+
+        if self.x.eq(&other.x()) { 
+            if self.y.lt(&other.y()) {
+                return Ordering::Less;
+            }
+            return Ordering::Greater;
+        }
+
+        if self.x.lt(&other.x()) { 
+            return Ordering::Less;
+        }
+
+        Ordering::Greater
+    }
+
+    pub fn compare_y_x(&self, other: &Point) -> Ordering {
+        if self.x.eq(&other.x()) && self.y.eq(&other.y()) {
+            return Ordering::Equal;
+        }
+
+        if self.y.eq(&other.y()) { 
+            if self.x.lt(&other.x()) {
+                return Ordering::Less;
+            }
+            return Ordering::Greater;
+        }
+
+        if self.y.lt(&other.y()) { 
+            return Ordering::Less;
+        }
+
+        Ordering::Greater
+    }
 }
 
 impl Eq for Point {
@@ -41,12 +86,17 @@ impl Eq for Point {
 
 impl PartialEq for Point {
     fn eq(&self, other: &Point) -> bool {
-        self.x == other.x() &&
-            self.y == other.y()
+        self.x.eq(&other.x()) && self.y.eq(&other.y())
     }
 
     fn ne(&self, other: &Point) -> bool {
         !self.eq(other)
+    }
+}
+
+impl fmt::Display for Point {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({}, {})", self.x, self.y)
     }
 }
 

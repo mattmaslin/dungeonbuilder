@@ -33,7 +33,7 @@ fn main() {
     let dungeon = DungeonBuilder::new()
         .in_area(Point::new(0f32,0f32), Point::new(3000f32, 3000f32))
         .with_dimension_options(DimensionOptions::new_with_max(50f32, 50f32, 4000f32, 80000f32))
-        .with_hallway_options(HallwayOptions::new(5.0f32, 5f32, 10f32, 20f32))
+        .with_hallway_options(HallwayOptions::new(5.0f32, 0f32, 20f32, 30f32))
         .build();
 
     let display = glium::glutin::WindowBuilder::new().build_glium().unwrap();
