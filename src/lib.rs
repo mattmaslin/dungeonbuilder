@@ -1,6 +1,7 @@
 extern crate rand;
 
 pub mod dungeonbuilder;
+mod hallwaybuilder;
 pub mod dungeon;
 pub mod point;
 pub mod hallway;

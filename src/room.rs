@@ -1,5 +1,6 @@
 use point::Point;
 use chunk::Chunk;
+use std::cmp::Ordering;
 
 pub struct Room {
     upper_right: Point,
@@ -17,6 +18,17 @@ impl Room {
 
     pub fn lower_left(&self) -> &Point {
         &self.lower_left
+    }
+
+    pub fn room_overlaps(&self, other: &Room) -> bool {
+        self.lower_left.x() == other.upper_right.x() ||
+            self.lower_left.y() == other.upper_right.y() ||
+            self.upper_right.x() == other.lower_left.x() ||
+            self.upper_right.y() == other.lower_left.y()
+    }
+
+    pub fn compare(&self, other: &Room) -> Ordering {
+        self.lower_left.compare_x_y(other.lower_left())
     }
 }
 

@@ -4,10 +4,9 @@ use point::Point;
 use dungeon::Dungeon;
 use rand::{Rng, ThreadRng, thread_rng};
 use dimensionoptions::DimensionOptions;
-use hallway::Hallway;
 use hallwayoptions::HallwayOptions;
+use hallwaybuilder::HallwayBuilder;
 use std::collections::BinaryHeap;
-use std::collections::HashMap;
 
 pub struct DungeonBuilder {
     chunks: BinaryHeap<Chunk>,
@@ -50,9 +49,8 @@ impl DungeonBuilder  {
     }
 
     pub fn build(&mut self) -> Dungeon {
-        let mut total_hallway_percent = 0f32;
+        let mut hallway_builder = HallwayBuilder::new();
         let mut dungeon = Dungeon::new();
-        let mut hallway_points : Vec<Point> = Vec::new();
         match self.dimension_options {
             Some(ref dimension_options) => {
                 while self.chunks.len() > 0 {
@@ -70,15 +68,11 @@ impl DungeonBuilder  {
                                             chunk.width() > hallway_options.min_hallway_length && chunk.height() > hallway_options.min_hallway_width
                                         }
                                     };
-                                    if can_strip_hallway && total_hallway_percent < hallway_options.hallway_percent {
+                                    let hallway_percent = (hallway_builder.total_area() / self.total_area) * 100f32;
+                                    if can_strip_hallway && hallway_percent < hallway_options.hallway_percent {
                                         let hallway_width = self.rng.gen_range(hallway_options.min_hallway_width, hallway_options.max_hallway_width);
                                         let hallway_chunk = chunk.strip_hallway(new_chunk.chunk_split(), hallway_width);
-                                        let hallway_percent = (hallway_chunk.area() / self.total_area) * 100f32;
-                                        total_hallway_percent = total_hallway_percent + hallway_percent;
-                                        hallway_points.push(hallway_chunk.lower_left().clone());
-                                        hallway_points.push(Point::new(hallway_chunk.lower_left().x(), hallway_chunk.upper_right().y()));
-                                        hallway_points.push(hallway_chunk.upper_right().clone());
-                                        hallway_points.push(Point::new(hallway_chunk.upper_right().x(), hallway_chunk.lower_left().y()));
+                                        hallway_builder.add_chunk(hallway_chunk);
                                     }
                                 },
                                 _ => {}
@@ -97,59 +91,10 @@ impl DungeonBuilder  {
                 panic!("dimension options must be set with 'with_dimension_options'")
             }
         }
-        self.merge_hallways(&mut hallway_points, &mut dungeon);
+        let hallways = hallway_builder.merge_hallways();
+        dungeon.add_hallways(hallways);
         dungeon
     }
-
-    fn merge_hallways(&mut self, hallway_points: &mut Vec<Point>, dungeon: &mut Dungeon) {
-        hallway_points.sort_by(|a, b| a.compare_x_y(&b));
-        hallway_points.dedup();
-        let mut horizontal_edges : HashMap<u64, Point> = HashMap::with_capacity(hallway_points.len());
-        let mut vertical_edges : HashMap<u64, Point> = HashMap::with_capacity(hallway_points.len());
-        let mut idx = 0usize;
-        while idx < hallway_points.len() - 1 {
-            vertical_edges.insert(hallway_points[idx].hash(), hallway_points[idx+1].clone());
-            vertical_edges.insert(hallway_points[idx+1].hash(), hallway_points[idx].clone());
-            idx = idx + 2;
-        }
-        hallway_points.sort_by(|a, b| a.compare_y_x(&b));
-        idx = 0usize;
-        while idx < hallway_points.len() - 1 {
-            horizontal_edges.insert(hallway_points[idx].hash(), hallway_points[idx+1].clone());
-            horizontal_edges.insert(hallway_points[idx+1].hash(), hallway_points[idx].clone());
-            idx = idx + 2;
-        }
-        let mut length = vertical_edges.len();
-        while length > 1 {
-            let mut points : Vec<Point> = Vec::new();
-            points.push(vertical_edges.values().nth(0).expect("No points in vertical_edges").clone()); 
-            let mut current_hash = points[0].hash();
-            let first_hash = current_hash;
-            let point = horizontal_edges.remove(&current_hash).expect("Start Horizontal Point not found");
-            let mut next_hash = point.hash();
-            horizontal_edges.remove(&next_hash);
-            points.push(point);
-            current_hash = next_hash;
-            next_hash = vertical_edges.get(&current_hash).expect("Next Vertical Point not found").hash();
-            while first_hash != next_hash {
-                let point = vertical_edges.remove(&current_hash).unwrap();
-                vertical_edges.remove(&point.hash());
-                points.push(point);
-                current_hash = next_hash;
-                let point = horizontal_edges.remove(&current_hash).expect("Horizontal Point not found");
-                next_hash = point.hash();
-                horizontal_edges.remove(&next_hash);
-                points.push(point);
-                current_hash = next_hash;
-                next_hash = vertical_edges.get(&current_hash).expect("Vertical Point not found").hash();
-            }
-            let point = vertical_edges.remove(&current_hash).unwrap();
-            vertical_edges.remove(&point.hash());
-            dungeon.add_hallway(Hallway::new(points));
-            length = vertical_edges.len();
-        }
-    }
-
 }
 
 #[cfg(test)]

@@ -12,11 +12,11 @@ impl Dungeon {
     }
 
     pub fn add_room(&mut self, room: Room) {
-        self.rooms.push(room);
+        self.rooms.push(room)
     }
 
-    pub fn add_hallway(&mut self, hallway: Hallway) {
-        self.hallways.push(hallway);
+    pub fn add_hallways(&mut self, hallways: Vec<Hallway>) {
+        self.hallways = hallways
     }
 
     pub fn rooms(&self) -> &[Room] {
